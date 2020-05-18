@@ -23,14 +23,7 @@
 		<property name="username" value="sa" />
 		<property name="password" value="" />
 	</bean> 
-        
-    <bean id="Schema" class="com.softwareplumbers.common.sql.Schema"> 
-        <property name="createScript" ref="feed.createScript"/>
-        <property name="updateScript" ref="feed.updateScript"/>
-        <property name="dropScript" ref="feed.dropScript"/>
-        <property name="entityMap" ref="feed.entityMap"/>
-    </bean>
-    
+            
     <bean id="database" class="com.softwareplumbers.feed.service.sql.MessageDatabase">
         <property name="createOption" value="RECREATE"/>
         <property name="operations" ref="feed.operations"/>
@@ -92,7 +85,7 @@
         <property name="SAMLResponseHandlerService" ref="softwarePlumbersSAMLServer"/>
     </bean>
 
-    <bean id="authz.public" class="com.softwareplumbers.dms.rest.server.model.RepositoryAuthorizationService" scope="singleton"/>
+    <bean id="authz.public" class="com.softwareplumbers.authz.impl.PublicAuthorizationService" scope="singleton"/>
 
     <bean id="FeedServiceFactory"
             class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
@@ -118,7 +111,7 @@
     
     <bean id="AuthorizationServiceFactory"
             class="org.springframework.beans.factory.config.ServiceLocatorFactoryBean">
-    	<property name="serviceLocatorInterface" value="com.softwareplumbers.rest.server.core.AuthorizationServiceFactory"/>
+    	<property name="serviceLocatorInterface" value="com.softwareplumbers.authz.AuthorizationServiceFactory"/>
         <property name="serviceMappings">
             <props>
                 <prop key="tmp">authz.public</prop>
