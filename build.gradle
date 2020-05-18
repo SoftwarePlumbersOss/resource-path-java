@@ -1,0 +1,186 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.5.22.RELEASE")
+    }
+}
+
+plugins {
+  id "org.jdrupes.mdoclet" version "1.0.5"
+}
+
+String propValue(String propName, String defValue) {
+    (project.hasProperty(propName) && project.getProperty(propName)) ? project.getProperty(propName) : defValue
+}
+
+version = propValue("ci_version","master");
+group = "com.softwareplumbers.oss"
+
+def SNAPSHOT_BUILDS = ["master"];
+
+if (SNAPSHOT_BUILDS.contains(version)) { version = version + "-SNAPSHOT" };
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+springBoot {
+    // spring only scans built classes so need to specify the application name
+    mainClass = 'com.softwareplumbers.feed.rest.server.Application'
+}
+
+bootRun {
+	systemProperties = System.properties
+    systemProperty "doctane.keystore.password", propValue("keystorePassword", "changeme")
+    systemProperty "spring.profiles.active", "test"
+    classpath = sourceSets.test.runtimeClasspath
+}
+
+test {
+	systemProperties = System.properties
+    systemProperty "doctane.keystore.password", propValue("keystorePassword", "changeme")
+    systemProperty "spring.profiles.active", "test"
+    systemProperty "spring.datasource.hikari.maximum-pool-size", 20
+	testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+javadoc {
+    source = sourceSets.main.allJava
+    classpath = configurations.compile
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    classifier = 'javadoc'
+}
+
+task bootJar1(type: Jar, dependsOn: classes) {
+  classifier 'standalone'
+  from sourceSets.main.output
+}
+
+bootRepackage  {
+	enabled=false
+}
+
+task repackageTask1(type: BootRepackage, dependsOn: bootJar1) {
+	classifier='standalone'
+	withJarTask='bootJar1'
+    customConfiguration = 'bootClasspath'
+}
+
+jar {
+	enabled = true
+	// exclude services.xml from the library (because when we include this as a library we will specify our own services.xml)
+	exclude("services.xml","**/JerseyConfig.class","**/Application.class","application.properties","logback-spring.xml")
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+	classifier 'sources'
+	from sourceSets.main.allSource
+}
+
+task testsJar(type: Jar, dependsOn: classes) {
+    classifier 'tests'
+    from sourceSets.test.output
+}
+
+task showConfigurations {
+    configurations.each { println it.name }
+}
+
+assemble {
+	dependsOn repackageTask1
+}
+
+artifacts {
+    archives sourcesJar 
+    archives bootJar1
+    archives testsJar
+    archives javadocJar
+}
+
+repositories {
+	maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
+    maven { url 'https://nexus.softwareplumbers.com/repository/maven-oss' }
+    maven { url 'https://nexus.softwareplumbers.com/repository/maven-oss-snapshot' }
+}
+
+uploadArchives {
+  dependsOn bootRepackage
+  repositories {
+    mavenDeployer {
+      repository(url: "https://nexus.softwareplumbers.com/repository/maven-oss") {
+      	authentication(userName: propValue("mavenUploadUser",""), password: propValue("mavenUploadPassword",""))
+      }
+      snapshotRepository(url: "https://nexus.softwareplumbers.com/repository/maven-oss-snapshot") {
+      	authentication(userName: propValue("mavenUploadUser",""), password: propValue("mavenUploadPassword",""))
+      }
+    }
+  }
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+dependencyManagement { 
+     dependencies {
+          dependencySet(group:'org.slf4j', version: '1.7.31-SNAPSHOT') {
+               entry 'slf4j-api'
+               entry 'slf4j-ext'
+               entry 'jul-to-slf4j'
+          }        
+     }
+}
+
+configurations {
+    defaultService
+    testCompile.extendsFrom(defaultService)
+    bootClasspath.extendsFrom(runtime, defaultService)
+}
+
+configurations.all {
+    // Check for updates to dependencies marked 'changing' every build
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+	exclude group: "commons-logging", module: "commons-logging"
+}
+
+dependencies {
+    compile("org.springframework.boot:spring-boot-starter-jersey")
+    compile("org.springframework.boot:spring-boot-starter-tomcat")
+    compile("org.springframework.boot:spring-boot-starter-logging")
+    compile group: 'org.glassfish.jersey.media', name: 'jersey-media-json-processing', version: '2.25.1'
+    compile group: 'org.glassfish.jersey.media', name: 'jersey-media-multipart', version: '2.25.1'
+    compile group: 'com.softwareplumbers.oss', name:'rest-server-core', version: 'master-SNAPSHOT'
+    compile group: 'com.softwareplumbers.oss', name:'feed-interface-core', version: 'master-SNAPSHOT'
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
+    compile group: 'org.opensaml', name: 'opensaml-saml-api', version: '3.3.0'
+    compile group: 'org.opensaml', name: 'opensaml-core', version: '3.3.0'
+    compile group: 'io.jsonwebtoken', name: 'jjwt-api', version:'0.10.5'
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.54'
+    compile group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.54'
+    compile group: 'javax.json', name: 'javax.json-api', version: '1.1.2'
+    runtime group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.10.5'
+    runtime group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.10.5'
+    runtime group: 'org.glassfish', name: 'javax.json', version: '1.1.2'
+    compile group: 'org.opensaml', name: 'opensaml-saml-impl', version: '3.3.0'
+    compile group: 'org.apache.tika', name:'tika-parsers', version:'1.22_swp'
+    compile group: 'org.slf4j', name: 'slf4j-ext', version: '1.7.31-SNAPSHOT'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.31-SNAPSHOT'
+    compile group: 'org.apache.commons', name: 'commons-text', version: '1.8' 
+
+    defaultService group: 'org.springframework.boot', name:'spring-boot-starter-jdbc'
+    defaultService group: 'org.springframework.boot', name:'spring-boot-starter-logging'
+    defaultService group: 'com.h2database', name: 'h2', version: '1.4.200'
+    defaultService group: 'com.zaxxer', name: 'HikariCP', version: '3.4.2'
+    defaultService group: 'com.softwareplumbers.oss', name: 'fluent-statement', version: '0.0.10'
+    defaultService group: 'com.softwareplumbers.oss', name:'feed-service-sql', version: 'master-SNAPSHOT'
+    
+    testCompile group: 'org.springframework.boot', name:'spring-boot-starter-test'
+}
