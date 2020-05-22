@@ -13,6 +13,7 @@ import com.softwareplumbers.feed.FeedService;
 import com.softwareplumbers.feed.Message;
 import com.softwareplumbers.feed.MessageIterator;
 import com.softwareplumbers.feed.impl.MessageFactory;
+import com.softwareplumbers.rest.server.core.Authenticated;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,7 +47,7 @@ import org.springframework.stereotype.Component;
  * @author jonathan
  */
 @Component
-//@Authenticated
+@Authenticated
 @Path("/feed")
 public class Feeds {
     
