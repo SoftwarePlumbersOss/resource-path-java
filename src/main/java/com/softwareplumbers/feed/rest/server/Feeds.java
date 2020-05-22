@@ -149,7 +149,7 @@ public class Feeds {
                     } catch (InvalidPath path) {
                         LOG.warn("failed to cancel callback");
                     }
-                    ar.resume(Response.status(Response.Status.NOT_FOUND).build());
+                    ar.resume(Response.status(Response.Status.OK).build());
                 });
                 feedService.listen(feedPath, fromTime, consumer);
             } else {
