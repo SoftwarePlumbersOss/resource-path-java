@@ -19,7 +19,7 @@ Build support is provided using gradle, and CI via Gitlab's native gitlab-ci.yml
 
 ## Feed Services
 
-The DMS REST server provides serviced (under the <tenant>/feed path). Authentication services from rest-server-core are 
+The REST server for feeds provides feed services under the <tenant>/feed path. Authentication services from rest-server-core are 
 found under <auth_tenant>/auth. A feed service enables clients to send a packet of JSON and binary information to a
 feed resource. Other clients may listen for a defined period of time to the same resource, during which time they will
 immediately receive any information packets sent to that resource.
