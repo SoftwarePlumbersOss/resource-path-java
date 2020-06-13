@@ -38,7 +38,7 @@ public class LocalConfig {
     @Bean
     public FeedService testService(LoginHandler loginHandler) throws KeyStoreException, IOException {
         FeedServiceImpl service = new FeedServiceImpl(
-            "http://localhost:8080/feed/tmp",
+            "http://localhost:8080/feed/tmp/",
                 loginHandler
         );
         return service;
