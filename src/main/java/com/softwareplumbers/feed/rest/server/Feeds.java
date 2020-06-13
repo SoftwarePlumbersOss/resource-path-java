@@ -34,6 +34,7 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
@@ -72,6 +73,7 @@ public class Feeds {
      */
     @Autowired
     public void setFeedServiceFactory(FeedServiceFactory serviceFactory) {
+        LOG.entry(serviceFactory);
         this.feedServiceFactory = serviceFactory;
     }
         
@@ -88,21 +90,21 @@ public class Feeds {
             @PathParam("repository") String repository,
             @PathParam("feed") FeedPath feedPath,
             @Context UriInfo uriInfo,
+            @Context SecurityContext securityContext,
             InputStream data
     ) throws FeedExceptions.BaseException {
         LOG.entry(repository, feedPath);
         FeedService feedService = feedServiceFactory.getService(repository);
         if (feedService == null) throw LOG.throwing(new RuntimeException("feed service not found"));
         Message parsed = messageFactory.build(data, false)
-            .orElseThrow(()->LOG.throwing(new RuntimeException("feed service not found")));
+            .orElseThrow(()->LOG.throwing(new RuntimeException("feed service not found")))
+            .setSender(securityContext.getUserPrincipal().getName());                
         Message result = feedService.post(feedPath, parsed);
         return LOG.exit(Response
             .created(getURI(uriInfo, repository, result.getName()))
             .entity(OutputConsumer.of(FeedExceptions.runtime(result::writeHeaders)))
             .build());
     }
-    
-
 
     public void resume(AsyncResponse response, MessageIterator messages) {
         LOG.entry(response, messages);
