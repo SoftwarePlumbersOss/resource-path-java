@@ -30,15 +30,15 @@ public class LocalConfig {
     @Bean LoginHandler loginHandler(KeyManager keyManager) throws KeyStoreException, IOException {
         SignedRequestLoginHandler handler = new SignedRequestLoginHandler();
         handler.setKeyManager(keyManager);
-        handler.setAuthURI("http://localhost:8080/auth/tmp/service?request={request}&signature={signature}");
-        handler.setRepository("tmp");
+        handler.setAuthURI("http://localhost:8080/auth/test/service?request={request}&signature={signature}");
+        handler.setRepository("test");
         return handler;
     }
     
     @Bean
     public FeedService testService(LoginHandler loginHandler) throws KeyStoreException, IOException {
         FeedServiceImpl service = new FeedServiceImpl(
-            "http://localhost:8080/feed/tmp/",
+            "http://localhost:8080/feed/test/",
                 loginHandler
         );
         return service;
