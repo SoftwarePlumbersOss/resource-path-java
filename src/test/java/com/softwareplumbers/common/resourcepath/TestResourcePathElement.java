@@ -5,9 +5,6 @@
  */
 package com.softwareplumbers.common.resourcepath;
 
-
-import com.softwareplumbers.common.resourcepath.ResourcePathElement;
-import com.softwareplumbers.common.resourcepath.ResourceMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import org.junit.Test;
 
@@ -17,7 +14,7 @@ import static org.hamcrest.Matchers.*;
  *
  * @author jonat
  */
-public class TestBaseResourceMap {
+public class TestResourcePathElement {
     
     String baseResourcePath = System.getProperty("test.resources");
     
@@ -39,6 +36,7 @@ public class TestBaseResourceMap {
     public void testClasspathResourceSubdir() {
         ResourcePathElement map = new ResourcePathElement("classpath:/config");
         ResourcePathElement sub = (ResourcePathElement)map.get("sub");
+        assertThat(map.get("sub"), any((Class)ResourceMap.class));
         assertThat(sub, notNullValue());
         assertThat(sub.get("resource3.txt"), notNullValue());
         assertThat(sub.get("nothing"), nullValue());
@@ -62,6 +60,7 @@ public class TestBaseResourceMap {
     @Test
     public void testFilesystemResourceSubdir() {
         ResourcePathElement map = new ResourcePathElement("file:" + baseResourcePath + "/config");
+        assertThat(map.get("sub"), any((Class)ResourceMap.class));
         ResourceMap sub = (ResourceMap)map.get("sub");
         assertThat(sub, notNullValue());
         assertThat(sub.get("resource3.txt"), notNullValue());

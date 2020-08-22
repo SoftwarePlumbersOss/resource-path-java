@@ -51,6 +51,7 @@ public class TestResourcePath {
     @Test
     public void testResourceSubdir() {
         ResourcePath map = new ResourcePath("file:"+baseResourcePath+"/altconfig", "classpath:/config");
+        assertThat(map.get("sub"), any((Class)ResourceMap.class));        
         ResourceMap sub = (ResourceMap)map.get("sub");
         assertThat(sub, notNullValue());
         assertThat(sub.get("resource3.txt"), notNullValue());
