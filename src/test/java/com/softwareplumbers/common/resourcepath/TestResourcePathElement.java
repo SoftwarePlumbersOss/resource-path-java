@@ -35,8 +35,8 @@ public class TestResourcePathElement {
     @Test
     public void testClasspathResourceSubdir() {
         ResourcePathElement map = new ResourcePathElement("classpath:/config");
-        ResourcePathElement sub = (ResourcePathElement)map.get("sub");
         assertThat(map.get("sub"), any((Class)ResourceMap.class));
+        ResourceMap sub = (ResourceMap)map.get("sub");
         assertThat(sub, notNullValue());
         assertThat(sub.get("resource3.txt"), notNullValue());
         assertThat(sub.get("nothing"), nullValue());

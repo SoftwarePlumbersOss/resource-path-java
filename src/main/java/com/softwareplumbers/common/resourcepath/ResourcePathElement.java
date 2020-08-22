@@ -12,6 +12,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import org.slf4j.ext.XLogger;
+import org.slf4j.ext.XLoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
@@ -21,14 +23,18 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  */
 class ResourcePathElement implements ResourceMap {
     
+    private static XLogger LOG = XLoggerFactory.getXLogger(ResourcePathElement.class);
+    
     private PathMatchingResourcePatternResolver resolver;
     private Map<String, Object> underlyingMap;
     private String root;
     
     private ResourcePathElement(PathMatchingResourcePatternResolver resolver, String root, Map<String, Object> underlyingMap) {
+        LOG.entry(resolver, root, underlyingMap);
         this.root = root;
         this.underlyingMap = underlyingMap;
         this.resolver = resolver;
+        LOG.exit();
     }
     
     public ResourcePathElement(String locationURI) {
@@ -36,23 +42,28 @@ class ResourcePathElement implements ResourceMap {
     }
     
     public void setLocationURI(String locationURI) {
+        LOG.entry(locationURI);
         this.root = locationURI;
         this.underlyingMap = null;
+        LOG.exit();
     }
 
     @Override
     public int size() {
-        return getUnderlyingMap().size();
+        LOG.entry();
+        return LOG.exit(getUnderlyingMap().size());
     }
 
     @Override
     public boolean isEmpty() {
-        return getUnderlyingMap().isEmpty();
+        LOG.entry();
+        return LOG.exit(getUnderlyingMap().isEmpty());
     }
 
     @Override
     public boolean containsKey(Object key) {
-        return get(key) != null;
+        LOG.entry();
+        return LOG.exit(get(key) != null);
     }
 
     @Override
@@ -62,21 +73,24 @@ class ResourcePathElement implements ResourceMap {
 
     @Override
     public Object get(Object key) {
+        LOG.entry(key);
         if (underlyingMap == null) {
             String resourceURI = root + "/" + key;
             Resource resource = resolver.getResource(resourceURI);
             if (resource.exists()) {
                 long contentLength = 0;
                 try { contentLength = resource.contentLength(); } catch (IOException e) { /* do nothing */ }
-                if (contentLength > 0)
-                    return resource;
-                else
-                    return new ResourcePathElement(resolver, resourceURI, null); 
+                if (contentLength > 0) {
+                    LOG.trace("Resource: {}", resource);
+                    LOG.trace("Resource is readable: {}", resource.isReadable());
+                    return LOG.exit(resource);
+                } else
+                    return LOG.exit(new ResourcePathElement(resolver, resourceURI, null)); 
             } else {
-                return null;
+                return LOG.exit(null);
             }
         } else {
-            return underlyingMap.get(key);
+            return LOG.exit(underlyingMap.get(key));
         }
     }
 
@@ -102,20 +116,24 @@ class ResourcePathElement implements ResourceMap {
 
     @Override
     public Set<String> keySet() {
-        return getUnderlyingMap().keySet();
+        LOG.entry();
+        return LOG.exit(getUnderlyingMap().keySet());
     }
 
     @Override
     public Collection<Object> values() {
-        return getUnderlyingMap().values();
+        LOG.entry();
+        return LOG.exit(getUnderlyingMap().values());
     }
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
-        return getUnderlyingMap().entrySet();
+        LOG.entry();
+        return LOG.exit(getUnderlyingMap().entrySet());
     }
     
     private  void underlyingPut(String[] path, Object resource) {
+        LOG.entry(path, resource);
         String head = path[0];
         if (path.length > 1) {
             ResourcePathElement headMap = (ResourcePathElement)underlyingMap.compute(head, (key, value)->{
@@ -126,6 +144,7 @@ class ResourcePathElement implements ResourceMap {
         } else {
             underlyingMap.put(head, resource);
         }
+        LOG.exit();
     }
     
     private String[] segments(String path) {
@@ -157,6 +176,7 @@ class ResourcePathElement implements ResourceMap {
     }
     
     private synchronized Map<String, Object> getUnderlyingMap() {
+        LOG.entry();
         if (underlyingMap == null) {
             underlyingMap = new TreeMap<>();
             try {
@@ -168,7 +188,7 @@ class ResourcePathElement implements ResourceMap {
                 throw new RuntimeException(e);
             }
         }
-        return underlyingMap;
+        return LOG.exit(underlyingMap);
     }    
     
     public String toString() {
