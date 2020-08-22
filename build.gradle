@@ -18,10 +18,9 @@ apply plugin: 'java'
 apply plugin: 'maven'
 
 test {
-	systemProperties = System.properties
-        systemProperties 'java.util.logging.config.file' : new File(projectDir,'src/test/resources/logging.properties').absolutePath
-        systemProperty "installation.root", propValue("installFolder", "/var/tmp/test")
-	testLogging {
+    systemProperties = System.properties
+    systemProperty 'test.resources', new File(projectDir,'src/test/resources').absolutePath
+    testLogging {
         events "passed", "skipped", "failed"
     }
 }
