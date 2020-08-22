@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.softwareplumbers.common.resource.configurable;
+package com.softwareplumbers.common.resourcepath;
 
 import java.util.Map;
 

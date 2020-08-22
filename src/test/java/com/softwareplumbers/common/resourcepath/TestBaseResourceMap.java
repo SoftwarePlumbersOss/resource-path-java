@@ -3,9 +3,11 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.softwareplumbers.common.resource.configurable;
+package com.softwareplumbers.common.resourcepath;
 
 
+import com.softwareplumbers.common.resourcepath.ResourcePathElement;
+import com.softwareplumbers.common.resourcepath.ResourceMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import org.junit.Test;
 

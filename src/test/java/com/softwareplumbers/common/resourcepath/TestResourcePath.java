@@ -3,8 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.softwareplumbers.common.resource.configurable;
+package com.softwareplumbers.common.resourcepath;
 
+import com.softwareplumbers.common.resourcepath.ResourceMap;
+import com.softwareplumbers.common.resourcepath.ResourcePath;
 import java.io.IOException;
 import java.io.InputStream;
 import static org.hamcrest.Matchers.*;
