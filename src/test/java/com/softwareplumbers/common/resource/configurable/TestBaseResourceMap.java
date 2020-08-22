@@ -21,7 +21,7 @@ public class TestBaseResourceMap {
     
     @Test
     public void testFetchClasspathResource() {
-        BaseResourceMap map = new BaseResourceMap("classpath:/config");
+        ResourcePathElement map = new ResourcePathElement("classpath:/config");
         assertThat(map.get("resource1.txt"), notNullValue());
         assertThat(map.get("resource2.txt"), notNullValue());
         assertThat(map.get("nothing"), nullValue());
@@ -29,14 +29,14 @@ public class TestBaseResourceMap {
     
     @Test
     public void testClasspathResourceCount() {
-        BaseResourceMap map = new BaseResourceMap("classpath:/config");
+        ResourcePathElement map = new ResourcePathElement("classpath:/config");
         assertThat(map.size(), equalTo(3));
     }
 
     @Test
     public void testClasspathResourceSubdir() {
-        BaseResourceMap map = new BaseResourceMap("classpath:/config");
-        BaseResourceMap sub = (BaseResourceMap)map.get("sub");
+        ResourcePathElement map = new ResourcePathElement("classpath:/config");
+        ResourcePathElement sub = (ResourcePathElement)map.get("sub");
         assertThat(sub, notNullValue());
         assertThat(sub.get("resource3.txt"), notNullValue());
         assertThat(sub.get("nothing"), nullValue());
@@ -45,7 +45,7 @@ public class TestBaseResourceMap {
     
     @Test
     public void testFetchFilesystemResource() {
-        BaseResourceMap map = new BaseResourceMap("file:" + baseResourcePath + "/config");
+        ResourcePathElement map = new ResourcePathElement("file:" + baseResourcePath + "/config");
         assertThat(map.get("resource1.txt"), notNullValue());
         assertThat(map.get("resource2.txt"), notNullValue());
         assertThat(map.get("nothing"), nullValue());
@@ -53,13 +53,13 @@ public class TestBaseResourceMap {
     
     @Test
     public void testFilesystemResourceCount() {
-        BaseResourceMap map = new BaseResourceMap("file:" + baseResourcePath + "/config");
+        ResourcePathElement map = new ResourcePathElement("file:" + baseResourcePath + "/config");
         assertThat(map.size(), equalTo(3));
     }
 
     @Test
     public void testFilesystemResourceSubdir() {
-        BaseResourceMap map = new BaseResourceMap("file:" + baseResourcePath + "/config");
+        ResourcePathElement map = new ResourcePathElement("file:" + baseResourcePath + "/config");
         ResourceMap sub = (ResourceMap)map.get("sub");
         assertThat(sub, notNullValue());
         assertThat(sub.get("resource3.txt"), notNullValue());

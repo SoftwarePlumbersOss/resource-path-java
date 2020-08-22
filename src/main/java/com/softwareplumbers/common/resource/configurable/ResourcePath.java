@@ -14,9 +14,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.core.io.Resource;
 
-/**
+/** Simple bean allowing a resource to be fetched from one of a number of paths.
+ * 
+ * Essentially, functions like a classpath except can include locations not in the classpath.
+ * This is better and more secure than futzing with the classpath just to load resources.
+ * 
+ * This is presented using a map interface so that resources can be simply accessed in Spring
+ * using SPEL. For example, the SPEL expression #{@ResourcePath["file.txt"]} could be used in
+ * an XML config file or @Value tag. 
  *
- * @author jonathan essex
+ * @author Jonathan Essex
  */
 public class ResourcePath implements ResourceMap {
         
@@ -26,8 +33,8 @@ public class ResourcePath implements ResourceMap {
         path = new ArrayList<>();
     }
     
-    public ResourcePath(ResourceMap... paths) {
-        path = new ArrayList<>();
+    private static final List<ResourceMap> flatten(ResourceMap... paths) {
+        List<ResourceMap> path = new ArrayList<>();
         for (ResourceMap element : paths) {
             if (element instanceof ResourcePath) {
                 path.addAll(((ResourcePath)element).path);
@@ -35,12 +42,33 @@ public class ResourcePath implements ResourceMap {
                 path.add(element);
             }
         }
+        return path;
     }
     
-    public ResourcePath(String... paths) {
-        path = new ArrayList<>();
-        for (String element : paths) {
-            path.add(new BaseResourceMap(element));
+    private ResourcePath(ResourceMap... path) {
+        this.path = flatten(path);
+    }
+    
+    /** Create a new ResourcePath.
+     * 
+     * @param locationURIs URIs from which we will load resources.
+     */
+    public ResourcePath(String... locationURIs) {
+        this.path = new ArrayList<>();
+        for (String element : locationURIs) {
+            this.path.add(new ResourcePathElement(element));
+        }    
+    }
+    /** Set locations from which resource path will load resources.
+     * 
+     * This is the way we expect to initialize this in spring XML. Each 
+     * 
+     * @param locationURIs Array of URIs from which we will load resources.
+     */
+    public void setLocations(String[] locationURIs) {
+        this.path = new ArrayList<>();
+        for (String element : locationURIs) {
+            this.path.add(new ResourcePathElement(element));
         }    
     }
 
@@ -69,21 +97,42 @@ public class ResourcePath implements ResourceMap {
         return path.stream().map(map->map.get(key)).filter(Objects::nonNull).reduce(ResourcePath::merge).orElse(null);
     }
 
+    /** Unsupported operation.
+     * 
+     * Any call to this method will generate an UnsupportedOperationException.
+     * 
+     * @param key
+     * @param value
+     */
     @Override
     public Object put(String key, Object value) {
         throw new UnsupportedOperationException("ResourcePath is read only"); 
     }
 
+    /** Unsupported operation.
+     * 
+     * Any call to this method will generate an UnsupportedOperationException.
+     * 
+     * @param key
+     */
     @Override
     public Object remove(Object key) {
         throw new UnsupportedOperationException("ResourcePath is read only"); 
     }
 
+    /** Unsupported operation.
+     * 
+     * Any call to this method will generate an UnsupportedOperationException.
+     */
     @Override
     public void putAll(Map<? extends String, ? extends Object> m) {
         throw new UnsupportedOperationException("ResourcePath is read only"); 
     }
 
+    /** Unsupported operation.
+     * 
+     * Any call to this method will generate an UnsupportedOperationException.
+     */
     @Override
     public void clear() {
         throw new UnsupportedOperationException("ResourcePath is read only"); 
@@ -118,6 +167,7 @@ public class ResourcePath implements ResourceMap {
         return merge(path).entrySet();
     }
     
+    @Override
     public String toString() {
         return "[ResourcePath: " + path.toString() + "]";
                 

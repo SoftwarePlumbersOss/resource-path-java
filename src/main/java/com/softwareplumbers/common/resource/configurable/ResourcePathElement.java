@@ -15,24 +15,29 @@ import java.util.TreeMap;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
-/**
+/** Base resource class which defines a location from which we would like to load resources.
  *
- * @author jonat
+ * @author Jonathan Essex
  */
-public class BaseResourceMap implements ResourceMap {
+class ResourcePathElement implements ResourceMap {
     
     private PathMatchingResourcePatternResolver resolver;
     private Map<String, Object> underlyingMap;
     private String root;
     
-    private BaseResourceMap(PathMatchingResourcePatternResolver resolver, String root, Map<String, Object> underlyingMap) {
+    private ResourcePathElement(PathMatchingResourcePatternResolver resolver, String root, Map<String, Object> underlyingMap) {
         this.root = root;
         this.underlyingMap = underlyingMap;
         this.resolver = resolver;
     }
     
-    public BaseResourceMap(String root) {
-        this(new PathMatchingResourcePatternResolver(), root, null);
+    public ResourcePathElement(String locationURI) {
+        this(new PathMatchingResourcePatternResolver(), locationURI, null);
+    }
+    
+    public void setLocationURI(String locationURI) {
+        this.root = locationURI;
+        this.underlyingMap = null;
     }
 
     @Override
@@ -66,7 +71,7 @@ public class BaseResourceMap implements ResourceMap {
                 if (contentLength > 0)
                     return resource;
                 else
-                    return new BaseResourceMap(resolver, resourceURI, null); 
+                    return new ResourcePathElement(resolver, resourceURI, null); 
             } else {
                 return null;
             }
@@ -113,8 +118,8 @@ public class BaseResourceMap implements ResourceMap {
     private  void underlyingPut(String[] path, Object resource) {
         String head = path[0];
         if (path.length > 1) {
-            BaseResourceMap headMap = (BaseResourceMap)underlyingMap.compute(head, (key, value)->{
-                if (value == null || value instanceof Resource) return new BaseResourceMap(resolver, root + "/" + head, new TreeMap<>());
+            ResourcePathElement headMap = (ResourcePathElement)underlyingMap.compute(head, (key, value)->{
+                if (value == null || value instanceof Resource) return new ResourcePathElement(resolver, root + "/" + head, new TreeMap<>());
                 return value;
             });
             headMap.underlyingPut(Arrays.copyOfRange(path, 1, path.length), resource);

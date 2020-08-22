@@ -7,9 +7,12 @@ package com.softwareplumbers.common.resource.configurable;
 
 import java.util.Map;
 
-/**
+/** Basic interface for ResourcePath and internal components.
+ * 
+ * A ResourceMap maps a String key to either a spring Resource object
+ * or another ResourceMap object.
  *
- * @author jonat
+ * @author Jonathan Essex.
  */
 public interface ResourceMap extends Map<String,Object> {
     
