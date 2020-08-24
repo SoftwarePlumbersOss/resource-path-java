@@ -1,14 +1,8 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.5.22.RELEASE")
-    }
-}
-
 plugins {
+  id "org.springframework.boot" version "1.5.22.RELEASE"
   id "org.jdrupes.mdoclet" version "1.0.10"
+  id "com.github.ManifestClasspath" version "0.1.0-RELEASE"
+  id "com.bmuschko.docker-remote-api" version "6.6.1"      
 }
 
 String propValue(String propName, String defValue) {
@@ -26,31 +20,54 @@ apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
+apply plugin: 'war'
+
+import com.bmuschko.gradle.docker.tasks.image.*
 
 springBoot {
     // spring only scans built classes so need to specify the application name
     mainClass = 'com.softwareplumbers.feed.rest.server.Application'
 }
 
+def defaultEnvironment = [
+    'DOCTANE_KEYSTORE_PASSWORD': propValue("keystorePassword", "changeme"),
+    'DOCTANE_INSTALLATION_ROOT': propValue("installRoot", "/var/tmp/doctane"),
+    'DOCTANE_DATABASE_URL': propValue("databaseUrl", "jdbc:h2:file://var/tmp/doctane/h2"),
+    'DOCTANE_DATABASE_USER': propValue("databaseUser", "sa"),
+    'DOCTANE_DATABASE_PASSWORD': propValue("databasePassword", "password"),
+    'DOCTANE_DATABASE_DRIVER': propValue("databaseDriver", "org.h2.Driver"),
+    'DOCTANE_DATABASE_CREATE_OPTION': propValue("databaseCreateOption", "RECREATE"),
+    'DOCTANE_DATABASE_VARIANT': propValue("databaseVariant", "h2"),
+    'SPRING_PROFILES_ACTIVE': propValue("springProfile", "test")
+]
+
+def dockerEnvironment = [
+    'DOCTANE_KEYSTORE_PASSWORD': propValue("keystorePassword", "changeme"),
+    'DOCTANE_INSTALLATION_ROOT': "/var/doctane",
+    'DOCTANE_DATABASE_URL': propValue("databaseUrl", "jdbc:h2:file://var/doctane/h2"),
+    'DOCTANE_DATABASE_USER': propValue("databaseUser", "sa"),
+    'DOCTANE_DATABASE_PASSWORD': propValue("databasePassword", "password"),
+    'DOCTANE_DATABASE_DRIVER': propValue("databaseDriver", "org.h2.Driver"),
+    'DOCTANE_DATABASE_CREATE_OPTION': propValue("databaseCreateOption", "UPDATE"),
+    'DOCTANE_DATABASE_VARIANT': propValue("databaseVariant", "h2"),
+    'SPRING_PROFILES_ACTIVE': propValue("springProfile", "test")
+]
+
+configurations {
+    sqlService
+    testCompile.extendsFrom(sqlService)
+    bootClasspath.extendsFrom(runtime, sqlService)
+}
+
 bootRun {
     systemProperties = System.properties
-    systemProperty "doctane.keystore.password", propValue("keystorePassword", "changeme")
-    systemProperty "spring.profiles.active", "test"
-    systemProperty "local.certs.dir", propValue("localCertsDir", "/var/tmp/doctane/certs")
-    systemProperty "local.keystore", propValue("localKeystore", "/var/tmp/doctane/doctane.keystore")
-    systemProperty "database.url", propValue("databaseUrl", "jdbc:h2:file://var/tmp/doctane/h2")
-    systemProperty "database.createOption", propValue("databaseCreateOption", "UPDATE")    
+    environment = defaultEnvironment
     classpath = sourceSets.test.runtimeClasspath
 }
 
 test {
     systemProperties = System.properties
-    systemProperty "doctane.keystore.password", propValue("keystorePassword", "changeme")
-    systemProperty "spring.profiles.active", "test"
-    systemProperty "local.certs.dir", propValue("localCertsDir", "/var/tmp/doctane/certs")
-    systemProperty "local.keystore", propValue("localKeystore", "/var/tmp/doctane/doctane.keystore")
-    systemProperty "database.url", propValue("databaseUrl", "jdbc:h2:file://var/tmp/doctane/h2")
-    systemProperty "database.createOption", propValue("databaseCreateOption", "UPDATE")    
+    environment = defaultEnvironment
     systemProperty "spring.datasource.hikari.maximum-pool-size", 20
 	testLogging {
         events "passed", "skipped", "failed"
@@ -77,15 +94,15 @@ bootRepackage  {
 }
 
 task repackageTask1(type: BootRepackage, dependsOn: bootJar1) {
-	classifier='standalone'
-	withJarTask='bootJar1'
+    classifier='standalone'
+    withJarTask='bootJar1'
     customConfiguration = 'bootClasspath'
 }
 
 jar {
-	enabled = true
-	// exclude services.xml from the library (because when we include this as a library we will specify our own services.xml)
-	exclude("services.xml","**/JerseyConfig.class","**/Application.class","application.properties","logback-spring.xml")
+    enabled = true
+    // exclude services.xml from the library (because when we include this as a library we will specify our own services.xml)
+    exclude("services.xml","**/JerseyConfig.class","**/Application.class","application.properties","logback-spring.xml")
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -106,17 +123,78 @@ assemble {
 	dependsOn repackageTask1
 }
 
+task buildDockerWar(type: War) {
+    classifier='docker'
+    classpath configurations.sqlService
+    rootSpec.exclude('/config/*')
+}
+
+task cleanDockerBuildContext(type: Delete) {
+    delete "$buildDir/docker"
+}
+
+task copyDockerConfig(type: Copy, dependsOn: [ cleanDockerBuildContext ]) {
+    from 'src/main/resources/config'
+    into "$buildDir/docker/config"
+}
+
+task copyDockerWar(type: Copy, dependsOn: [ cleanDockerBuildContext, buildDockerWar ]) {
+    from(buildDockerWar.archiveFile) {
+        rename { whatever -> 'ROOT.war' }
+    }
+    into "$buildDir/docker/webapps"  
+}
+
+task createDockerfile(type: Dockerfile, dependsOn: [ copyDockerConfig, copyDockerWar ]) {
+    def dockerRoot = dockerEnvironment["DOCTANE_INSTALLATION_ROOT"];
+    from 'docker-repositories.softwareplumbers.com:443/softwareplumbers/tomcat-centos:0.0.14'
+    environmentVariable(dockerEnvironment)  
+    environmentVariable(["CATALINA_OPTS" : "-Dspring.config.location=file:$dockerRoot/config -Dlogging.config=file:$dockerRoot/config/logback-spring.xml"])
+    user('root')
+    runCommand("mkdir -p $dockerRoot/documents")
+    runCommand("mkdir -p $dockerRoot/pkix")
+    runCommand("mkdir -p $dockerRoot/db")
+    runCommand("chown -R tomcat:tomcat $dockerRoot")
+    user('tomcat')
+    copyFile('webapps', '/usr/local/apache-tomcat-9.0.29/webapps')
+    copyFile('config', "$dockerRoot/config")
+    //copyFile('secrets', "$dockerRoot/secrets")
+}
+
+task buildDockerImage(type: DockerBuildImage, dependsOn: createDockerfile) {
+    images.add("softwareplumbers/doctane-feeds-tc9:$version")
+}
+
+task tagDockerImage(type: DockerTagImage, dependsOn: buildDockerImage) {
+    imageId = buildDockerImage.getImageId()
+    repository = "docker-repositories.softwareplumbers.com:443/softwareplumbers/doctane-feeds-tc9"
+    tag = version
+}
+
+task uploadDockerImage(type: DockerPushImage, dependsOn: tagDockerImage) {
+    group docker
+    images.add("docker-repositories.softwareplumbers.com:443/softwareplumbers/doctane-feeds-tc9:$version")    
+}
+
 artifacts {
     archives sourcesJar 
     archives bootJar1
     archives testsJar
     archives javadocJar
+    archives war
 }
 
 repositories {
-	maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
+    maven { url propValue("proxyMavenCentral", "https://repo.maven.apache.org/maven2/") }
     maven { url 'https://nexus.softwareplumbers.com/repository/maven-oss' }
     maven { url 'https://nexus.softwareplumbers.com/repository/maven-oss-snapshot' }
+    maven { 
+      url 'https://nexus.softwareplumbers.com/repository/oracle' 
+      credentials { 
+        username propValue("mavenUploadUser","") 
+        password propValue("mavenUploadPassword","")
+      }
+    }
 }
 
 uploadArchives {
@@ -147,10 +225,8 @@ dependencyManagement {
      }
 }
 
-configurations {
-    defaultService
-    testCompile.extendsFrom(defaultService)
-    bootClasspath.extendsFrom(runtime, defaultService)
+war {
+    classpath configurations.sqlService
 }
 
 configurations.all {
@@ -165,21 +241,24 @@ dependencies {
     compile("org.springframework.boot:spring-boot-starter-logging")
     compile group: 'org.glassfish.jersey.media', name: 'jersey-media-json-processing', version: '2.25.1'
     compile group: 'org.glassfish.jersey.media', name: 'jersey-media-multipart', version: '2.25.1'
-    compile group: 'com.softwareplumbers.oss', name:'rest-server-core', version: '0.5.5'
-    compile group: 'com.softwareplumbers.oss', name:'feed-interface-core', version: '0.0.9'
+    compile group: 'com.softwareplumbers.oss', name:'rest-server-core', version: '0.5.8'
+    compile group: 'com.softwareplumbers.oss', name:'feed-interface-core', version: '0.0.15'
     compile group: 'javax.json', name: 'javax.json-api', version: '1.1.2'
     runtime group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.10.5'
     runtime group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.10.5'
     runtime group: 'org.glassfish', name: 'javax.json', version: '1.1.2'
     compile group: 'org.slf4j', name: 'slf4j-ext', version: '1.7.31-SNAPSHOT'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.31-SNAPSHOT'
+    compile group: 'com.softwareplumbers.oss', name: 'kubernetes-environment', version: '0.0.1'
 
-    defaultService group: 'org.springframework.boot', name:'spring-boot-starter-jdbc'
-    defaultService group: 'com.h2database', name: 'h2', version: '1.4.200'
-    defaultService group: 'com.zaxxer', name: 'HikariCP', version: '3.4.2'
-    defaultService group: 'com.softwareplumbers.oss', name:'feed-service-sql', version: '0.0.11'
+    sqlService group: 'org.springframework.boot', name:'spring-boot-starter-jdbc'
+    sqlService group: 'com.h2database', name: 'h2', version: '1.4.200'
+    sqlService group: 'com.zaxxer', name: 'HikariCP', version: '3.4.2'
+    sqlService group: 'com.softwareplumbers.oss', name:'feed-service-sql', version: '0.0.14'
+    sqlService group: 'com.oracle.jdbc', name: 'ojdbc8', version: '18.3.0.0'
+    sqlService group: 'mysql', name: 'mysql-connector-java', version: '8.0.21'
     
     testCompile group: 'org.springframework.boot', name:'spring-boot-starter-test'
     testCompile group: 'com.softwareplumbers.oss', name:'feed-client-spring', version: '0.0.6'
-    testCompile group: 'com.softwareplumbers.oss', name: 'feed-interface-core', version: '0.0.9', classifier: 'tests'
+    testCompile group: 'com.softwareplumbers.oss', name: 'feed-interface-core', version: '0.0.15', classifier: 'tests'
 }

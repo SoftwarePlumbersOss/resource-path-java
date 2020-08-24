@@ -29,7 +29,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, classes = Application.class)
 @EnableConfigurationProperties
-@ContextConfiguration(classes = { LocalConfig.class }, locations= { "/services.xml" })
+@ContextConfiguration(classes = { LocalConfig.class }, locations= { "/config/services.xml" })
 public class TestServer extends TestFeedService  {
     
     @Autowired KeyManager keyManager;
