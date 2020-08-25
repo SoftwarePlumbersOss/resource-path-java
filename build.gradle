@@ -197,6 +197,14 @@ repositories {
     }
 }
 
+docker {
+    registryCredentials {
+        url = 'https://docker-repositories.softwareplumbers.com:443/v1/'
+        username = propValue("mavenUploadUser","") 
+        password = propValue("mavenUploadPassword","")
+    }
+}
+
 uploadArchives {
   dependsOn bootRepackage
   repositories {
