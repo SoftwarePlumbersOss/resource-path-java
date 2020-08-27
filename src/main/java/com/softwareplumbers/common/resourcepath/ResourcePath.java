@@ -61,7 +61,7 @@ public class ResourcePath implements ResourceMap {
         LOG.entry(locationURIs);
         this.path = new ArrayList<>();
         for (String element : locationURIs) {
-            this.path.add(new ResourcePathElement(element));
+            if (element != null) this.path.add(new ResourcePathElement(element));
         }    
         LOG.exit();
     }
@@ -75,7 +75,7 @@ public class ResourcePath implements ResourceMap {
         LOG.entry(locationURIs);
         this.path = new ArrayList<>();
         for (String element : locationURIs) {
-            this.path.add(new ResourcePathElement(element));
+            if (element != null) this.path.add(new ResourcePathElement(element));
         }    
         LOG.exit();
     }
