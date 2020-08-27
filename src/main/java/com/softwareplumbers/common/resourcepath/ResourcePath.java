@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.ext.XLogger;
+import org.slf4j.ext.XLoggerFactory;
 import org.springframework.core.io.Resource;
 
 /** Simple bean allowing a resource to be fetched from one of a number of paths.
@@ -27,6 +29,8 @@ import org.springframework.core.io.Resource;
  */
 public class ResourcePath implements ResourceMap {
         
+    private static XLogger LOG = XLoggerFactory.getXLogger(ResourcePath.class);
+
     private List<ResourceMap> path;
     
     public ResourcePath() {
@@ -54,10 +58,12 @@ public class ResourcePath implements ResourceMap {
      * @param locationURIs URIs from which we will load resources.
      */
     public ResourcePath(String... locationURIs) {
+        LOG.entry(locationURIs);
         this.path = new ArrayList<>();
         for (String element : locationURIs) {
             this.path.add(new ResourcePathElement(element));
         }    
+        LOG.exit();
     }
     /** Set locations from which resource path will load resources.
      * 
@@ -66,25 +72,30 @@ public class ResourcePath implements ResourceMap {
      * @param locationURIs Array of URIs from which we will load resources.
      */
     public void setLocations(String[] locationURIs) {
+        LOG.entry(locationURIs);
         this.path = new ArrayList<>();
         for (String element : locationURIs) {
             this.path.add(new ResourcePathElement(element));
         }    
+        LOG.exit();
     }
 
     @Override
     public int size() {
-        return keySet().size();
+        LOG.entry();
+        return LOG.exit(keySet().size());
     }
 
     @Override
     public boolean isEmpty() {
-        return path.stream().allMatch(Map::isEmpty);
+        LOG.entry();
+        return LOG.exit(path.stream().allMatch(Map::isEmpty));
     }
 
     @Override
     public boolean containsKey(Object key) {
-        return path.stream().anyMatch(map->map.containsKey(key));
+        LOG.entry(key);
+        return LOG.exit(path.stream().anyMatch(map->map.containsKey(key)));
     }
 
     @Override
@@ -94,7 +105,14 @@ public class ResourcePath implements ResourceMap {
 
     @Override
     public Object get(Object key) {
-        return path.stream().map(map->map.get(key)).filter(Objects::nonNull).reduce(ResourcePath::merge).orElse(null);
+        LOG.entry(key);
+        return LOG.exit(
+            path.stream()
+                .map(map->map.get(key))
+                .filter(Objects::nonNull)
+                .reduce(ResourcePath::merge)
+                .orElse(null)
+        );
     }
 
     /** Unsupported operation.
@@ -140,13 +158,15 @@ public class ResourcePath implements ResourceMap {
 
     @Override
     public Set<String> keySet() {
-        return path.stream().flatMap(map->map.keySet().stream()).collect(Collectors.toSet());
+        LOG.entry();
+        return LOG.exit(path.stream().flatMap(map->map.keySet().stream()).collect(Collectors.toSet()));
     }
     
 
     @Override
     public Collection<Object> values() {
-        return merge(path).values();
+        LOG.entry();
+        return LOG.exit(merge(path).values());
     }
     
     private static Object merge(Object a, Object b) {
@@ -164,7 +184,8 @@ public class ResourcePath implements ResourceMap {
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
-        return merge(path).entrySet();
+        LOG.entry();
+        return LOG.exit(merge(path).entrySet());
     }
     
     @Override

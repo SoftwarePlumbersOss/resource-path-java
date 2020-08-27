@@ -76,16 +76,19 @@ class ResourcePathElement implements ResourceMap {
         LOG.entry(key);
         if (underlyingMap == null) {
             String resourceURI = root + "/" + key;
+            LOG.trace("Resource URI: {}", resourceURI);
             Resource resource = resolver.getResource(resourceURI);
-            if (resource.exists()) {
+            LOG.trace("resolver.getResource returned: {}", resource);
+            if (resource != null && resource.exists()) {
                 //long contentLength = 0;
                 //try { contentLength = resource.contentLength(); } catch (IOException e) { /* do nothing */ }
                 if (resource.isReadable()) {
-                    LOG.trace("Resource: {}", resource);
-                    LOG.trace("Resource is readable: {}", resource.isReadable());
+                    LOG.trace("Resource is readable");
                     return LOG.exit(resource);
-                } else
+                } else {
+                    LOG.trace("Resource is not readable");
                     return LOG.exit(new ResourcePathElement(resolver, resourceURI, null)); 
+                }
             } else {
                 return LOG.exit(null);
             }
