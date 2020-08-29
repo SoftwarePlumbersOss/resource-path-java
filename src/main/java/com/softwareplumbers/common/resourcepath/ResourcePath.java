@@ -80,6 +80,10 @@ public class ResourcePath implements ResourceMap {
         LOG.exit();
     }
     
+    /** Get the locations which will be searched for resources.
+     * 
+     * @return An array of location URIs
+     */
     public String[] getLocations() {
         return this.path.stream()
             .filter(element -> element != null)
