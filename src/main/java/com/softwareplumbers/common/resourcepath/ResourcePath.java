@@ -72,12 +72,22 @@ public class ResourcePath implements ResourceMap {
      * @param locationURIs Array of URIs from which we will load resources.
      */
     public void setLocations(String[] locationURIs) {
-        LOG.entry(locationURIs);
+        LOG.entry((Object[])locationURIs);
         this.path = new ArrayList<>();
         for (String element : locationURIs) {
             if (element != null) this.path.add(new ResourcePathElement(element));
         }    
         LOG.exit();
+    }
+    
+    public String[] getLocations() {
+        return this.path.stream()
+            .filter(element -> element != null)
+            .map(element -> 
+                element instanceof ResourcePathElement 
+                    ? ((ResourcePathElement)element).getLocationURI()
+                    : element.toString()
+            ).toArray(String[]::new);
     }
 
     @Override

@@ -47,6 +47,10 @@ class ResourcePathElement implements ResourceMap {
         this.underlyingMap = null;
         LOG.exit();
     }
+    
+    public String getLocationURI() {
+        return root;
+    }
 
     @Override
     public int size() {
