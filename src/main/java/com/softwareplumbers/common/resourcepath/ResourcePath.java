@@ -5,6 +5,9 @@
  */
 package com.softwareplumbers.common.resourcepath;
 
+import com.softwareplumbers.common.pipedstream.InputStreamSupplier;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -58,7 +61,7 @@ public class ResourcePath implements ResourceMap {
      * @param locationURIs URIs from which we will load resources.
      */
     public ResourcePath(String... locationURIs) {
-        LOG.entry(locationURIs);
+        LOG.entry((Object[])locationURIs);
         this.path = new ArrayList<>();
         for (String element : locationURIs) {
             if (element != null) this.path.add(new ResourcePathElement(element));
@@ -207,4 +210,21 @@ public class ResourcePath implements ResourceMap {
         return "[ResourcePath: " + path.toString() + "]";
                 
     }
+    
+    private Path toPath(Resource resource) {
+        try {
+            return resource.getFile().toPath();
+        } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
+    }
+    
+    public DerivedMap<Path> getPaths() {
+        return new DerivedMap<>(this, this::toPath);
+    }
+    
+    public DerivedMap<InputStreamSupplier> getStreams() {
+        return new DerivedMap<>(this, resource->InputStreamSupplier.markPersistent(()->resource.getInputStream()));
+    }
+
 }
